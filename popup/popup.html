@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShortHub Extension</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <!-- Header -->
+        <div class="popup-header">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="32" cy="32" r="30" fill="#FF0000" stroke="#CC0000" stroke-width="2"/>
+                    <g transform="translate(32,32)">
+                        <path d="M 0,-20 A 20,20 0 0,1 14.14,-14.14" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                        <polygon points="14.14,-14.14 18,-18 18,-10 10,-10" fill="white"/>
+                        <path d="M 0,20 A 20,20 0 0,1 -14.14,14.14" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                        <polygon points="-14.14,14.14 -18,18 -18,10 -10,10" fill="white"/>
+                    </g>
+                    <g transform="translate(32,32)">
+                        <circle cx="0" cy="0" r="12" fill="white"/>
+                        <polygon points="-4,-6 -4,6 8,0" fill="#FF0000"/>
+                    </g>
+                </svg>
+                <span>ShortHub</span>
+            </div>
+            <div class="version">v1.0.0</div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+            <button class="tab-btn" data-tab="config">Settings</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div class="tab-content active" id="dashboard">
+            <div class="status-section">
+                <div class="status-indicator" id="connection-status">
+                    <div class="status-dot"></div>
+                    <span class="status-text">Checking connection...</span>
+                </div>
+            </div>
+
+            <div class="stats-grid" id="stats-container">
+                <div class="stat-card">
+                    <div class="stat-number" id="channels-count">-</div>
+                    <div class="stat-label">Channels</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="shorts-count">-</div>
+                    <div class="stat-label">Shorts Rolled</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="validated-count">-</div>
+                    <div class="stat-label">Validated</div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn-primary" id="open-app">Open ShortHub App</button>
+                <button class="btn-secondary" id="refresh-stats">Refresh Stats</button>
+            </div>
+
+            <div class="help-section">
+                <h4>How to use:</h4>
+                <ul>
+                    <li>Visit any YouTube channel or short</li>
+                    <li>Click the "Add to ShortHub" button</li>
+                    <li>Fill in the tag and type information</li>
+                    <li>The channel will be saved to your database</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Configuration Tab -->
+        <div class="tab-content" id="config">
+            <div class="config-section">
+                <h3>Supabase Configuration</h3>
+                <p class="config-description">
+                    Configure your Supabase connection to save channels to your ShortHub database.
+                </p>
+
+                <form class="config-form" id="config-form">
+                    <div class="form-group">
+                        <label for="supabase-url">Supabase URL</label>
+                        <input 
+                            type="url" 
+                            id="supabase-url" 
+                            placeholder="https://your-project.supabase.co"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="supabase-key">Supabase Anon Key</label>
+                        <input 
+                            type="password" 
+                            id="supabase-key" 
+                            placeholder="Your anon key..."
+                            required
+                        >
+                        <button type="button" class="toggle-password" id="toggle-key">
+                            <span class="show-text">Show</span>
+                            <span class="hide-text" style="display: none;">Hide</span>
+                        </button>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary" id="save-config">
+                            Save Configuration
+                        </button>
+                        <button type="button" class="btn-secondary" id="test-connection">
+                            Test Connection
+                        </button>
+                    </div>
+                </form>
+
+                <div class="connection-result" id="connection-result" style="display: none;">
+                    <div class="result-content"></div>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <h4>Getting your Supabase credentials:</h4>
+                <ol>
+                    <li>Go to your <a href="https://supabase.com/dashboard" target="_blank">Supabase Dashboard</a></li>
+                    <li>Select your ShortHub project</li>
+                    <li>Go to Settings → API</li>
+                    <li>Copy the "URL" and "anon public" key</li>
+                    <li>Paste them in the fields above</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loading-overlay" style="display: none;">
+            <div class="loader"></div>
+            <span>Loading...</span>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div class="toast-container" id="toast-container"></div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

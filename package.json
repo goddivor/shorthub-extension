@@ -1,0 +1,38 @@
+{
+  "name": "shorthub-extension",
+  "version": "1.0.0",
+  "description": "Browser extension to add YouTube channels to ShortHub directly from YouTube pages",
+  "main": "background/background.js",
+  "scripts": {
+    "build": "npm run copy-files",
+    "copy-files": "mkdir -p dist && cp -r manifest.json content/ background/ popup/ icons/ dist/",
+    "dev": "npm run build && npm run watch",
+    "watch": "chokidar 'content/**/*' 'background/**/*' 'popup/**/*' 'manifest.json' -c 'npm run build'",
+    "package": "npm run build && cd dist && zip -r ../shorthub-extension.zip .",
+    "lint": "eslint content/ background/ popup/",
+    "test": "jest"
+  },
+  "keywords": [
+    "youtube",
+    "browser-extension",
+    "chrome-extension",
+    "shorts",
+    "content-management"
+  ],
+  "author": "ShortHub Team",
+  "license": "MIT",
+  "devDependencies": {
+    "chokidar-cli": "^3.0.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "web-ext": "^7.11.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/goddivor/shorthub-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/goddivor/shorthub-extension/issues"
+  },
+  "homepage": "https://github.com/goddivor/shorthub-extension#readme"
+}
