@@ -4,145 +4,652 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShortHub Extension</title>
-    <link rel="stylesheet" href="popup.css">
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #1f2937;
+            /* background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%); */
+            width: 420px;
+            min-height: 600px;
+            overflow: hidden;
+        }
+
+        /* Main container */
+        .popup-container {
+            position: relative;
+            width: 100%;
+            min-height: 600px;
+            background: white;
+            border-radius: 16px 16px 0 0;
+            margin-top: 60px;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Header with logo floating above */
+        .popup-header {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .logo-container {
+            background: white;
+            border-radius: 20px;
+            padding: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            margin-bottom: 8px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ff0000;
+        }
+
+        .version-badge {
+            background: rgba(255, 255, 255, 0.9);
+            color: #ff0000;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Main content */
+        .popup-content {
+            padding: 60px 24px 24px;
+        }
+
+        /* Status section */
+        .status-section {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .page-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .page-status.youtube {
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
+        }
+
+        .page-status.not-youtube {
+            background: #f3f4f6;
+            color: #6b7280;
+            border: 1px solid #e5e7eb;
+        }
+
+        .status-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        /* Channel section */
+        .channel-section {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .channel-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .channel-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.2);
+        }
+
+        .channel-info h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+
+        .channel-info p {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .subscriber-count {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #10b981;
+            font-weight: 500;
+        }
+
+        /* Form section */
+        .form-section {
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 14px;
+            background: white;
+            color: #1f2937;
+            transition: all 0.2s ease;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 12px center;
+            background-repeat: no-repeat;
+            background-size: 16px;
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #ff0000;
+            box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.1);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 14px;
+            background: white;
+            color: #1f2937;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #ff0000;
+            box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.1);
+        }
+
+        .form-input:disabled {
+            background: #f9fafb;
+            color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        /* Action buttons */
+        .action-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 0, 0, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: #f8fafc;
+            color: #374151;
+            border: 2px solid #e5e7eb;
+        }
+
+        .btn-secondary:hover {
+            background: #f1f5f9;
+            border-color: #d1d5db;
+        }
+
+        /* Loading state */
+        .loading-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Footer */
+        .popup-footer {
+            border-top: 1px solid #e5e7eb;
+            padding: 20px 24px;
+            background: #f9fafb;
+            border-radius: 0 0 16px 16px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-link {
+            color: #6b7280;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .footer-link:hover {
+            color: #ff0000;
+        }
+
+        /* Error states */
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .success-message {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Configuration section */
+        .config-section {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .config-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .config-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .config-info h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 2px;
+        }
+
+        .config-info p {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease;
+        }
+
+        /* Hidden state */
+        .hidden {
+            display: none;
+        }
+
+        /* Tab system */
+        .tab-nav {
+            display: flex;
+            background: #f3f4f6;
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 24px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px 16px;
+            background: none;
+            border: none;
+            font-size: 13px;
+            font-weight: 500;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 8px;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: #ff0000;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+    </style>
 </head>
 <body>
     <div class="popup-container">
-        <!-- Header -->
+        <!-- Floating header -->
         <div class="popup-header">
-            <div class="logo">
-                <svg width="32" height="32" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="32" cy="32" r="30" fill="#FF0000" stroke="#CC0000" stroke-width="2"/>
-                    <g transform="translate(32,32)">
-                        <path d="M 0,-20 A 20,20 0 0,1 14.14,-14.14" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-                        <polygon points="14.14,-14.14 18,-18 18,-10 10,-10" fill="white"/>
-                        <path d="M 0,20 A 20,20 0 0,1 -14.14,14.14" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-                        <polygon points="-14.14,14.14 -18,18 -18,10 -10,10" fill="white"/>
-                    </g>
-                    <g transform="translate(32,32)">
-                        <circle cx="0" cy="0" r="12" fill="white"/>
-                        <polygon points="-4,-6 -4,6 8,0" fill="#FF0000"/>
-                    </g>
-                </svg>
-                <span>ShortHub</span>
+            <div class="logo-container">
+                <div class="logo">
+                    <svg width="32" height="32" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="32" cy="32" r="30" fill="#FF0000" stroke="#CC0000" stroke-width="2"/>
+                        <g transform="translate(32,32)">
+                            <path d="M 0,-20 A 20,20 0 0,1 14.14,-14.14" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                            <polygon points="14.14,-14.14 18,-18 18,-10 10,-10" fill="white"/>
+                            <path d="M 0,20 A 20,20 0 0,1 -14.14,14.14" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                            <polygon points="-14.14,14.14 -18,18 -18,10 -10,10" fill="white"/>
+                        </g>
+                        <g transform="translate(32,32)">
+                            <circle cx="0" cy="0" r="12" fill="white"/>
+                            <polygon points="-4,-6 -4,6 8,0" fill="#FF0000"/>
+                        </g>
+                    </svg>
+                    <span class="logo-text">ShortHub</span>
+                </div>
             </div>
-            <div class="version">v1.0.0</div>
+            <div class="version-badge">v2.0.0</div>
         </div>
 
-        <!-- Navigation Tabs -->
-        <div class="tab-nav">
-            <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
-            <button class="tab-btn" data-tab="config">Settings</button>
-        </div>
-
-        <!-- Dashboard Tab -->
-        <div class="tab-content active" id="dashboard">
-            <div class="status-section">
-                <div class="status-indicator" id="connection-status">
-                    <div class="status-dot"></div>
-                    <span class="status-text">Checking connection...</span>
-                </div>
+        <!-- Main content -->
+        <div class="popup-content">
+            <!-- Tab navigation -->
+            <div class="tab-nav">
+                <button class="tab-btn active" data-tab="add-channel">Add Channel</button>
+                <button class="tab-btn" data-tab="settings">Settings</button>
             </div>
 
-            <div class="stats-grid" id="stats-container">
-                <div class="stat-card">
-                    <div class="stat-number" id="channels-count">-</div>
-                    <div class="stat-label">Channels</div>
+            <!-- Add Channel Tab -->
+            <div class="tab-content active" id="add-channel">
+                <!-- Status section -->
+                <div class="status-section">
+                    <div class="page-status" id="page-status">
+                        <div class="status-icon"></div>
+                        <span id="status-text">Analyzing current page...</span>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="shorts-count">-</div>
-                    <div class="stat-label">Shorts Rolled</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="validated-count">-</div>
-                    <div class="stat-label">Validated</div>
-                </div>
-            </div>
 
-            <div class="action-buttons">
-                <button class="btn-primary" id="open-app">Open ShortHub App</button>
-                <button class="btn-secondary" id="refresh-stats">Refresh Stats</button>
-            </div>
-
-            <div class="help-section">
-                <h4>How to use:</h4>
-                <ul>
-                    <li>Visit any YouTube channel or short</li>
-                    <li>Click the "Add to ShortHub" button</li>
-                    <li>Fill in the tag and type information</li>
-                    <li>The channel will be saved to your database</li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- Configuration Tab -->
-        <div class="tab-content" id="config">
-            <div class="config-section">
-                <h3>Supabase Configuration</h3>
-                <p class="config-description">
-                    Configure your Supabase connection to save channels to your ShortHub database.
-                </p>
-
-                <form class="config-form" id="config-form">
-                    <div class="form-group">
-                        <label for="supabase-url">Supabase URL</label>
-                        <input 
-                            type="url" 
-                            id="supabase-url" 
-                            placeholder="https://your-project.supabase.co"
-                            required
-                        >
+                <!-- Channel section -->
+                <div class="channel-section" id="channel-section">
+                    <div class="channel-header">
+                        <div class="channel-avatar" id="channel-avatar">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                            </svg>
+                        </div>
+                        <div class="channel-info">
+                            <h3 id="channel-name">Loading channel info...</h3>
+                            <div class="subscriber-count">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M16 4v4h4V4h-4zm-4 4v4h4V8h-4zm-4 4v4h4v-4H8zm-4 4v4h4v-4H4z"/>
+                                </svg>
+                                <span id="subscriber-count">- subscribers</span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="supabase-key">Supabase Anon Key</label>
-                        <input 
-                            type="password" 
-                            id="supabase-key" 
-                            placeholder="Your anon key..."
-                            required
-                        >
-                        <button type="button" class="toggle-password" id="toggle-key">
-                            <span class="show-text">Show</span>
-                            <span class="hide-text" style="display: none;">Hide</span>
+                    <!-- Form section -->
+                    <div class="form-section">
+                        <form id="channel-form">
+                            <div class="form-group">
+                                <label class="form-label" for="tag-select">Language Tag</label>
+                                <select class="form-select" id="tag-select" required>
+                                    <option value="">Select language...</option>
+                                    <option value="VF">VF (Version Française)</option>
+                                    <option value="VOSTFR">VOSTFR (VO Sous-titrée FR)</option>
+                                    <option value="VA">VA (Version Anglaise)</option>
+                                    <option value="VOSTA">VOSTA (VO Sous-titrée Anglaise)</option>
+                                    <option value="VO">VO (Version Originale)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="type-select">Channel Type</label>
+                                <select class="form-select" id="type-select" required>
+                                    <option value="">Select type...</option>
+                                    <option value="Mix">Mix (Varied Content)</option>
+                                    <option value="Only">Only (Specific Domain)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group hidden" id="domain-group">
+                                <label class="form-label" for="domain-input">Specific Domain</label>
+                                <input 
+                                    type="text" 
+                                    class="form-input" 
+                                    id="domain-input" 
+                                    placeholder="e.g., Gaming, Tech, Music, Cooking..."
+                                >
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Action section -->
+                    <div class="action-section">
+                        <button class="btn btn-primary" id="add-channel-btn" disabled>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+                            </svg>
+                            Add to ShortHub
+                        </button>
+                        
+                        <button class="btn btn-secondary" id="open-app-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+                            </svg>
+                            Open ShortHub App
                         </button>
                     </div>
 
-                    <div class="form-actions">
-                        <button type="submit" class="btn-primary" id="save-config">
-                            Save Configuration
-                        </button>
-                        <button type="button" class="btn-secondary" id="test-connection">
-                            Test Connection
-                        </button>
-                    </div>
-                </form>
-
-                <div class="connection-result" id="connection-result" style="display: none;">
-                    <div class="result-content"></div>
+                    <!-- Messages -->
+                    <div id="message-container"></div>
                 </div>
             </div>
 
-            <div class="help-section">
-                <h4>Getting your Supabase credentials:</h4>
-                <ol>
-                    <li>Go to your <a href="https://supabase.com/dashboard" target="_blank">Supabase Dashboard</a></li>
-                    <li>Select your ShortHub project</li>
-                    <li>Go to Settings → API</li>
-                    <li>Copy the "URL" and "anon public" key</li>
-                    <li>Paste them in the fields above</li>
-                </ol>
+            <!-- Settings Tab -->
+            <div class="tab-content" id="settings">
+                <div class="config-section">
+                    <div class="config-header">
+                        <div class="config-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+                            </svg>
+                        </div>
+                        <div class="config-info">
+                            <h4>Configuration</h4>
+                            <p>Set up your database connection</p>
+                        </div>
+                    </div>
+
+                    <form id="config-form">
+                        <div class="form-group">
+                            <label class="form-label" for="supabase-url">Supabase URL</label>
+                            <input 
+                                type="url" 
+                                class="form-input" 
+                                id="supabase-url" 
+                                placeholder="https://your-project.supabase.co"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="supabase-key">Supabase API Key</label>
+                            <input 
+                                type="password" 
+                                class="form-input" 
+                                id="supabase-key" 
+                                placeholder="Your anon key..."
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="youtube-api-key">YouTube API Key (Optional)</label>
+                            <input 
+                                type="password" 
+                                class="form-input" 
+                                id="youtube-api-key" 
+                                placeholder="Your YouTube API key..."
+                            >
+                        </div>
+
+                        <div class="action-section">
+                            <button type="submit" class="btn btn-primary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3M19,19H5V5H16.17L19,7.83V19Z"/>
+                                </svg>
+                                Save Configuration
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="test-connection-btn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,16.5L6.5,12L7.91,10.59L11,13.67L16.59,8.09L18,9.5L11,16.5Z"/>
+                                </svg>
+                                Test Connection
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
 
-        <!-- Loading Overlay -->
-        <div class="loading-overlay" id="loading-overlay" style="display: none;">
-            <div class="loader"></div>
-            <span>Loading...</span>
+        <!-- Footer -->
+        <div class="popup-footer">
+            <div class="footer-links">
+                <a href="#" class="footer-link" id="help-link">Help & Support</a>
+                <span class="footer-link">Made with ❤️ for creators</span>
+                <a href="#" class="footer-link" id="github-link">GitHub</a>
+            </div>
         </div>
-
-        <!-- Toast Notifications -->
-        <div class="toast-container" id="toast-container"></div>
     </div>
 
     <script src="popup.js"></script>

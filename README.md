@@ -1,122 +1,166 @@
-# ShortHub Browser Extension
+# 🚀 ShortHub Extension v2.0
 
-A Chrome/Firefox extension that allows you to add YouTube channels directly to your ShortHub database while browsing YouTube.
+> Modern browser extension to streamline your YouTube Shorts workflow by adding channels directly from YouTube to your ShortHub database.
 
-## 🌟 Features
+![ShortHub Extension](https://img.shields.io/badge/version-2.0.0-red?style=for-the-badge&logo=youtube)
+![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
+![Chrome](https://img.shields.io/badge/Chrome-supported-blue?style=for-the-badge&logo=googlechrome)
+![Firefox](https://img.shields.io/badge/Firefox-supported-orange?style=for-the-badge&logo=firefox)
 
-- **One-Click Channel Addition**: Add any YouTube channel to ShortHub with a single click
-- **Smart Button Injection**: Automatically detects YouTube channel and shorts pages
-- **Form Integration**: Tag and categorize channels directly from YouTube
-- **Real-time Sync**: Instantly saves to your Supabase database
-- **Channel Detection**: Works on both channel pages and individual shorts
-- **Duplicate Prevention**: Prevents adding the same channel twice
+## ✨ What's New in v2.0
 
-## 🎯 How It Works
+### 🎯 Complete Architecture Refactor
+- **No more DOM injection** - Cleaner, more reliable approach
+- **Smart URL analysis** - Works on any YouTube page without content scripts
+- **Real-time channel detection** - Instant analysis when you open the popup
+- **Modern UI/UX** - Beautiful, responsive design with YouTube colors
 
-### 1. **Channel Pages**
-When you visit a YouTube channel page, the extension injects an "Add to ShortHub" button next to the subscribe button.
+### 🔧 Enhanced Features
+- **YouTube API Integration** - Accurate channel data extraction
+- **Advanced URL Parsing** - Supports all YouTube URL formats
+- **Intelligent Fallbacks** - Works even without API key
+- **Better Error Handling** - Clear feedback and retry mechanisms
 
-### 2. **YouTube Shorts**
-When viewing a YouTube Short, the extension adds the button next to the channel name, automatically extracting the channel URL.
+## 🎯 Features
 
-### 3. **Quick Configuration**
-- Fill in tag (VF, VOSTFR, VA, VOSTA, VO)
-- Select type (Mix or Only)
-- Specify domain if type is "Only"
-- Save directly to your database
+### Core Functionality
+- 🎬 **Universal YouTube Support** - Works on channels, videos, shorts
+- 🔄 **Real-time Analysis** - Instant channel detection from any YouTube URL
+- 📊 **Accurate Data** - Fetch real subscriber counts and channel info
+- 🏷️ **Smart Tagging** - Organize by language (VF, VOSTFR, VA, VOSTA, VO)
+- 🎯 **Type Classification** - Mix content or domain-specific channels
+- 💾 **Supabase Integration** - Direct database storage
+
+### User Experience
+- 🎨 **Modern UI** - Clean, intuitive interface with YouTube branding
+- ⚡ **Instant Feedback** - Real-time status updates and validation
+- 🔧 **Easy Configuration** - Simple setup for database and API keys
+- 📱 **Responsive Design** - Works perfectly on any screen size
 
 ## 🚀 Installation
 
-### Development Installation
+### For Users
+1. **Download** the latest release from [GitHub Releases](https://github.com/goddivor/shorthub-extension/releases)
+2. **Unzip** the extension package
+3. **Open** Chrome/Firefox extensions page
+   - Chrome: `chrome://extensions/`
+   - Firefox: `about:addons`
+4. **Enable** Developer mode
+5. **Load** the extension folder
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/shorthub-extension.git
-   cd shorthub-extension
-   ```
+### For Developers
+```bash
+# Clone the repository
+git clone https://github.com/goddivor/shorthub-extension.git
+cd shorthub-extension
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+# Install dependencies
+npm install
 
-3. **Build the extension**
-   ```bash
-   npm run build
-   ```
+# Build the extension
+npm run build
 
-4. **Load in Chrome**
-   - Open Chrome and go to `chrome://extensions/`
-   - Enable "Developer mode"
-   - Click "Load unpacked"
-   - Select the `dist` folder
-
-### Production Installation
-
-1. Download the `.zip` file from the releases page
-2. Extract the archive
-3. Load unpacked extension in Chrome/Firefox
+# Start development with hot reload
+npm run dev
+```
 
 ## ⚙️ Configuration
 
-### 1. **Get Supabase Credentials**
-- Go to your [Supabase Dashboard](https://supabase.com/dashboard)
-- Select your ShortHub project
-- Navigate to Settings → API
-- Copy the "URL" and "anon public" key
-
-### 2. **Configure Extension**
-- Click the ShortHub extension icon
-- Go to the "Settings" tab
-- Enter your Supabase URL and API key
-- Click "Test Connection" to verify
-- Save configuration
-
-### 3. **Database Setup**
-Make sure your Supabase database has the required tables:
-
-```sql
--- Channels table
-CREATE TABLE channels (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  youtube_url TEXT NOT NULL UNIQUE,
-  username TEXT NOT NULL,
-  subscriber_count INTEGER DEFAULT 0,
-  tag TEXT NOT NULL CHECK (tag IN ('VF', 'VOSTFR', 'VA', 'VOSTA', 'VO')),
-  type TEXT NOT NULL CHECK (type IN ('Mix', 'Only')),
-  domain TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Shorts rolls table
-CREATE TABLE shorts_rolls (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  channel_id UUID REFERENCES channels(id) ON DELETE CASCADE,
-  video_url TEXT NOT NULL,
-  validated BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  validated_at TIMESTAMP WITH TIME ZONE
-);
+### 1. Supabase Setup (Required)
+```javascript
+// Your Supabase project configuration
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key-here
 ```
 
-## 🎮 Usage
+### 2. YouTube API Key (Optional but Recommended)
+```javascript
+// For accurate channel data extraction
+YOUTUBE_API_KEY=your-youtube-api-key-here
+```
+
+**Getting YouTube API Key:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing
+3. Enable YouTube Data API v3
+4. Create credentials (API Key)
+5. Restrict the key to YouTube Data API v3
+
+## 🔧 Usage
 
 ### Adding a Channel
+1. **Visit** any YouTube page (channel, video, or short)
+2. **Click** the ShortHub extension icon
+3. **Review** the detected channel information
+4. **Select** language tag and type
+5. **Add domain** if type is "Only"
+6. **Click** "Add to ShortHub"
 
-1. **Visit YouTube**: Navigate to any YouTube channel or short
-2. **Click Button**: Look for the red "Add to ShortHub" button
-3. **Fill Form**: 
-   - Select appropriate tag (VF, VOSTFR, VA, VOSTA, VO)
-   - Choose type (Mix for varied content, Only for specific domain)
-   - If "Only", specify the domain (Gaming, Tech, Music, etc.)
-4. **Save**: Click "Add Channel" to save to database
+### Supported URL Formats
+- `https://youtube.com/channel/UC...` - Direct channel ID
+- `https://youtube.com/@username` - Channel handle
+- `https://youtube.com/c/channelname` - Custom URL
+- `https://youtube.com/user/username` - Legacy username
+- `https://youtube.com/watch?v=...` - Video page
+- `https://youtube.com/shorts/...` - Shorts page
 
-### Managing Extension
+## 🏗️ Architecture
 
-- **Dashboard**: View statistics and connection status
-- **Settings**: Configure Supabase connection
-- **Test Connection**: Verify database connectivity
+### Background Script (`background/background.js`)
+```typescript
+class ModernShortHubBackground {
+  // YouTube API integration
+  extractChannelFromUrl(url: string)
+  
+  // Database operations
+  saveChannel(channelData: ChannelData)
+  
+  // Configuration management
+  updateConfiguration(config: Config)
+}
+```
+
+### Popup Interface (`popup/popup.html`)
+```typescript
+class ModernShortHubPopup {
+  // URL analysis and channel detection
+  analyzeCurrentPage()
+  
+  // Form handling and validation
+  validateForm()
+  
+  // User interaction management
+  handleChannelAddition()
+}
+```
+
+### Key Improvements Over v1.0
+- ❌ **No Content Scripts** - Eliminated unreliable DOM injection
+- ✅ **Pure Background Processing** - All logic in service worker
+- ✅ **API-First Approach** - YouTube API for accurate data
+- ✅ **Modern UI Components** - Custom-designed interface
+- ✅ **Better Error Handling** - Comprehensive error management
+
+## 📊 Data Schema
+
+### Channel Object
+```typescript
+interface Channel {
+  youtube_url: string      // Original YouTube URL
+  username: string         // Channel name/handle
+  subscriber_count: number // Current subscriber count
+  tag: TagType            // VF | VOSTFR | VA | VOSTA | VO
+  type: ChannelType       // Mix | Only
+  domain?: string         // Required if type === 'Only'
+}
+```
+
+## 🔒 Privacy & Security
+
+- **No Data Collection** - Extension only stores what you configure
+- **Local Storage** - Configuration stored locally in browser
+- **Direct API Calls** - No intermediate servers
+- **Minimal Permissions** - Only YouTube and configured domains
 
 ## 🛠️ Development
 
@@ -124,121 +168,80 @@ CREATE TABLE shorts_rolls (
 ```
 shorthub-extension/
 ├── manifest.json          # Extension manifest
-├── content/
-│   ├── content.js         # Main content script
-│   └── content.css        # Injected styles
 ├── background/
 │   └── background.js      # Service worker
 ├── popup/
-│   ├── popup.html         # Extension popup
-│   ├── popup.css          # Popup styles
-│   └── popup.js           # Popup logic
+│   └── popup.html         # Modern popup interface
 ├── icons/                 # Extension icons
-└── package.json
+└── dist/                  # Built extension
 ```
 
-### Scripts
-
+### Build Commands
 ```bash
-# Development with file watching
-npm run dev
-
-# Build for production
-npm run build
-
-# Create distribution package
-npm run package
-
-# Run linting
-npm run lint
-
-# Run tests
-npm run test
+npm run build      # Build for production
+npm run dev        # Development with watch
+npm run lint       # Code linting
+npm run test       # Run tests
+npm run package    # Create distribution zip
 ```
 
-### Content Script Features
+### Testing
+```bash
+# Unit tests
+npm run test
 
-- **URL Detection**: Identifies channel and shorts pages
-- **DOM Injection**: Safely injects buttons without breaking YouTube
-- **Data Extraction**: Automatically extracts channel name and subscriber count
-- **Navigation Handling**: Works with YouTube's SPA navigation
-- **Error Handling**: Graceful failure with user feedback
+# Extension validation
+npm run validate
 
-### Background Script Features
+# Browser testing
+npm run start:firefox  # Firefox development
+npm run start:chrome   # Chrome instructions
+```
 
-- **Supabase Integration**: Direct API communication
-- **Data Validation**: Ensures data integrity before saving
-- **Duplicate Prevention**: Checks for existing channels
-- **Configuration Management**: Secure storage of credentials
-- **Connection Testing**: Real-time database connectivity verification
+## 🔄 Migration from v1.0
 
-## 🎨 UI/UX
+### What Changed
+1. **No more content scripts** - Remove all DOM injection code
+2. **New popup design** - Modern, responsive interface
+3. **YouTube API integration** - More accurate data extraction
+4. **Better configuration** - Streamlined setup process
 
-- **YouTube Native Design**: Buttons blend seamlessly with YouTube's interface
-- **Red Color Scheme**: Consistent with YouTube and ShortHub branding
-- **Responsive Modal**: Works on different screen sizes
-- **Accessibility**: Keyboard navigation and screen reader support
-- **Error Feedback**: Clear success/error messages
-
-## 🔒 Security
-
-- **Secure Storage**: Credentials stored in Chrome's sync storage
-- **API Key Protection**: Keys are never exposed to content scripts
-- **HTTPS Only**: All communications use secure protocols
-- **Input Validation**: All user inputs are validated before processing
-- **Minimal Permissions**: Only requests necessary permissions
-
-## 🐛 Troubleshooting
-
-### Button Not Appearing
-- Refresh the YouTube page
-- Check if you're on a supported page (channel or shorts)
-- Verify the extension is enabled
-
-### Connection Issues
-- Verify Supabase URL format: `https://your-project.supabase.co`
-- Check API key is correct (anon public key)
-- Ensure database tables exist
-- Test connection in extension settings
-
-### Duplicate Channel Error
-- Channel URL already exists in database
-- Check your ShortHub app for existing entries
-- Different URL formats for same channel count as duplicates
-
-## 📝 Changelog
-
-### v1.0.0 (Initial Release)
-- ✅ Channel page button injection
-- ✅ Shorts page button injection
-- ✅ Supabase integration
-- ✅ Configuration management
-- ✅ Data validation
-- ✅ Error handling
-- ✅ Statistics dashboard
+### Migration Steps
+1. **Uninstall** old extension
+2. **Install** v2.0 extension
+3. **Reconfigure** Supabase credentials
+4. **Add** YouTube API key (optional)
+5. **Test** with your favorite channels
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-## 📄 License
+### Development Setup
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- YouTube for the platform
-- Supabase for the backend infrastructure
-- Chrome Extensions team for the robust API
-- ShortHub community for feedback and testing
+- **YouTube API** - For providing comprehensive channel data
+- **Supabase** - For the excellent database platform
+- **Chrome Extensions Team** - For the robust extension platform
+- **Our Contributors** - For making this project better
+
+## 🔗 Links
+
+- [Main ShortHub App](https://github.com/goddivor/shorthub)
+- [Extension Store Page](https://chrome.google.com/webstore/detail/shorthub) (Coming Soon)
+- [Documentation](https://docs.shorthub.dev)
+- [Support](https://github.com/goddivor/shorthub-extension/issues)
 
 ---
 
-**Need Help?** 
-- 📧 Email: support@shorthub.com
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/shorthub-extension/issues)
-- 💬 Discord: [ShortHub Community](https://discord.gg/shorthub)
+**Made with ❤️ for YouTube creators by the ShortHub team**

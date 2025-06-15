@@ -1,32 +1,44 @@
 {
   "name": "shorthub-extension",
-  "version": "1.0.0",
-  "description": "Browser extension to add YouTube channels to ShortHub directly from YouTube pages",
+  "version": "2.0.0",
+  "description": "Modern browser extension to add YouTube channels to ShortHub directly from YouTube pages with advanced URL analysis",
   "main": "background/background.js",
+  "type": "module",
   "scripts": {
-    "build": "npm run copy-files",
-    "copy-files": "mkdir -p dist && cp -r manifest.json content/ background/ popup/ icons/ dist/",
     "dev": "npm run build && npm run watch",
-    "watch": "chokidar 'content/**/*' 'background/**/*' 'popup/**/*' 'manifest.json' -c 'npm run build'",
-    "package": "npm run build && cd dist && zip -r ../shorthub-extension.zip .",
-    "lint": "eslint content/ background/ popup/",
-    "test": "jest"
+    "build": "npm run clean && npm run copy-files && npm run optimize",
+    "clean": "rm -rf dist",
+    "copy-files": "mkdir -p dist && cp -r manifest.json background/ popup/ icons/ dist/",
+    "optimize": "npm run optimize-images && npm run minify-js",
+    "optimize-images": "echo 'Image optimization placeholder - add imagemin if needed'",
+    "minify-js": "echo 'JS minification placeholder - add terser if needed'",
+    "watch": "chokidar 'background/**/*' 'popup/**/*' 'manifest.json' -c 'npm run build'",
+    "package": "npm run build && cd dist && zip -r ../shorthub-extension-v2.zip .",
+    "lint": "eslint background/ popup/ --ext .js",
+    "lint:fix": "eslint background/ popup/ --ext .js --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "validate": "web-ext lint --source-dir=dist",
+    "start:firefox": "web-ext run --source-dir=dist --browser-console",
+    "start:chrome": "echo 'Load dist/ folder as unpacked extension in Chrome Developer Mode'"
   },
   "keywords": [
     "youtube",
     "browser-extension",
     "chrome-extension",
+    "firefox-extension",
     "shorts",
-    "content-management"
+    "content-management",
+    "youtube-api",
+    "supabase",
+    "modern-ui"
   ],
-  "author": "ShortHub Team",
-  "license": "MIT",
-  "devDependencies": {
-    "chokidar-cli": "^3.0.0",
-    "eslint": "^8.57.0",
-    "jest": "^29.7.0",
-    "web-ext": "^7.11.0"
+  "author": {
+    "name": "ShortHub Team",
+    "email": "contact@shorthub.dev",
+    "url": "https://github.com/goddivor"
   },
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/goddivor/shorthub-extension.git"
@@ -34,5 +46,30 @@
   "bugs": {
     "url": "https://github.com/goddivor/shorthub-extension/issues"
   },
-  "homepage": "https://github.com/goddivor/shorthub-extension#readme"
+  "homepage": "https://github.com/goddivor/shorthub-extension#readme",
+  "devDependencies": {
+    "chokidar-cli": "^3.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "jest": "^29.7.0",
+    "terser": "^5.26.0",
+    "web-ext": "^7.11.0"
+  },
+  "optionalDependencies": {
+    "imagemin": "^8.0.1",
+    "imagemin-pngquant": "^9.0.2",
+    "imagemin-svgo": "^10.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "last 2 Firefox versions",
+    "last 2 Edge versions"
+  ]
 }
