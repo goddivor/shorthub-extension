@@ -1,16 +1,19 @@
 // Modern ShortHub Extension Background Script
+// CONFIG will be injected here during build from .env
+/* CONFIG_INJECTION_POINT */
+
 class ModernShortHubBackground {
   constructor() {
-    this.supabaseUrl = null;
-    this.supabaseKey = null;
-    this.youtubeApiKey = null;
+    this.graphqlEndpoint = CONFIG.GRAPHQL_ENDPOINT;
+    this.youtubeApiKey = CONFIG.YOUTUBE_API_KEY;
+    this.authToken = null;
     this.init();
   }
 
   init() {
-    // Load configuration on startup
-    this.loadConfiguration();
-    
+    // Load auth token from storage
+    this.loadAuthToken();
+
     // Listen for messages from popup
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       this.handleMessage(request, sender, sendResponse);
@@ -18,21 +21,18 @@ class ModernShortHubBackground {
     });
   }
 
-  // Load configuration from storage
-  async loadConfiguration() {
+  // Load auth token from storage
+  async loadAuthToken() {
     try {
-      const result = await chrome.storage.sync.get(['supabaseUrl', 'supabaseKey', 'youtubeApiKey']);
-      this.supabaseUrl = result.supabaseUrl;
-      this.supabaseKey = result.supabaseKey;
-      this.youtubeApiKey = result.youtubeApiKey;
-      
-      console.log('ShortHub: Configuration loaded', {
-        hasUrl: !!this.supabaseUrl,
-        hasKey: !!this.supabaseKey,
-        hasYouTubeKey: !!this.youtubeApiKey
+      const result = await chrome.storage.sync.get(['authToken']);
+      this.authToken = result.authToken;
+
+      console.log('ShortHub: Auth token loaded', {
+        hasToken: !!this.authToken,
+        endpoint: this.graphqlEndpoint
       });
     } catch (error) {
-      console.error('ShortHub: Failed to load configuration:', error);
+      console.error('ShortHub: Failed to load auth token:', error);
     }
   }
 
@@ -44,22 +44,26 @@ class ModernShortHubBackground {
           const channelData = await this.extractChannelFromUrl(request.url);
           sendResponse(channelData);
           break;
-          
+
         case 'saveChannel':
           const saveResult = await this.saveChannel(request.data);
           sendResponse(saveResult);
           break;
-          
-        case 'updateConfiguration':
-          const updateResult = await this.updateConfiguration(request.data);
-          sendResponse(updateResult);
+
+        case 'setAuthToken':
+          const setResult = await this.setAuthToken(request.token);
+          sendResponse(setResult);
           break;
-          
+
+        case 'getAuthToken':
+          sendResponse({ success: true, token: this.authToken });
+          break;
+
         case 'testConnection':
           const testResult = await this.testConnection();
           sendResponse(testResult);
           break;
-          
+
         default:
           sendResponse({ success: false, error: 'Unknown action' });
       }
@@ -69,12 +73,31 @@ class ModernShortHubBackground {
     }
   }
 
+  // Set auth token
+  async setAuthToken(token) {
+    try {
+      await chrome.storage.sync.set({ authToken: token });
+      this.authToken = token;
+
+      return {
+        success: true,
+        message: 'Auth token saved successfully'
+      };
+    } catch (error) {
+      console.error('Error setting auth token:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
   // Extract channel data from YouTube URL
   async extractChannelFromUrl(url) {
     try {
       // Parse different YouTube URL formats
       const channelInfo = this.parseYouTubeUrl(url);
-      
+
       if (!channelInfo) {
         return {
           success: false,
@@ -193,14 +216,15 @@ class ModernShortHubBackground {
 
       // Get channel details
       const channelData = await this.getChannelDetails(channelId);
-      
+
       return {
         success: true,
         data: {
-          name: channelData.name,
+          channelName: channelData.name,
+          channelId: channelId,
           url: `https://www.youtube.com/channel/${channelId}`,
           subscriberCount: channelData.subscriberCount,
-          channelId: channelId
+          profileImageUrl: channelData.profileImageUrl
         }
       };
 
@@ -225,7 +249,7 @@ class ModernShortHubBackground {
       }
 
       const data = await response.json();
-      
+
       if (!data.items || data.items.length === 0) {
         throw new Error('Video not found');
       }
@@ -254,7 +278,7 @@ class ModernShortHubBackground {
       }
 
       const data = await response.json();
-      
+
       if (!data.items || data.items.length === 0) {
         throw new Error('Channel not found in search');
       }
@@ -278,17 +302,20 @@ class ModernShortHubBackground {
       }
 
       const data = await response.json();
-      
+
       if (!data.items || data.items.length === 0) {
         throw new Error('Channel details not found');
       }
 
       const channel = data.items[0];
-      
+
       return {
         name: channel.snippet.title,
         subscriberCount: parseInt(channel.statistics.subscriberCount) || 0,
-        description: channel.snippet.description
+        description: channel.snippet.description,
+        profileImageUrl: channel.snippet.thumbnails?.high?.url ||
+                        channel.snippet.thumbnails?.medium?.url ||
+                        channel.snippet.thumbnails?.default?.url
       };
     } catch (error) {
       console.error('Error getting channel details:', error);
@@ -330,7 +357,7 @@ class ModernShortHubBackground {
       return {
         success: true,
         data: {
-          name: channelName,
+          channelName: channelName,
           url: channelUrl,
           subscriberCount: 0, // Cannot get subscriber count without API
           extractedFromUrl: true
@@ -344,14 +371,14 @@ class ModernShortHubBackground {
     }
   }
 
-  // Save channel to Supabase database
+  // Save channel to GraphQL backend
   async saveChannel(channelData) {
     try {
       // Check configuration
-      if (!this.supabaseUrl || !this.supabaseKey) {
+      if (!this.graphqlEndpoint || !this.authToken) {
         return {
           success: false,
-          error: 'Database not configured. Please set up Supabase connection in settings.'
+          error: 'Backend not configured. Please set your auth token first.'
         };
       }
 
@@ -364,37 +391,54 @@ class ModernShortHubBackground {
         };
       }
 
-      // Check if channel already exists
-      const exists = await this.checkChannelExists(channelData.youtube_url);
-      if (exists) {
-        return {
-          success: false,
-          error: 'This channel is already in your database.'
-        };
-      }
+      // Prepare GraphQL mutation
+      const mutation = `
+        mutation CreateSourceChannel($input: CreateSourceChannelInput!) {
+          createSourceChannel(input: $input) {
+            id
+            channelId
+            channelName
+            profileImageUrl
+            contentType
+            createdAt
+          }
+        }
+      `;
 
-      // Save to database
-      const response = await fetch(`${this.supabaseUrl}/rest/v1/channels`, {
+      const variables = {
+        input: {
+          youtubeUrl: channelData.youtubeUrl,
+          contentType: channelData.contentType
+        }
+      };
+
+      // Send mutation to GraphQL endpoint
+      const response = await fetch(this.graphqlEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': this.supabaseKey,
-          'Authorization': `Bearer ${this.supabaseKey}`,
-          'Prefer': 'return=representation'
+          'Authorization': `Bearer ${this.authToken}`
         },
-        body: JSON.stringify(channelData)
+        body: JSON.stringify({
+          query: mutation,
+          variables: variables
+        })
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Database error: ${response.status}`);
+        throw new Error(`GraphQL error: ${response.status}`);
       }
 
-      const savedChannel = await response.json();
-      
+      const result = await response.json();
+
+      if (result.errors) {
+        const errorMessage = result.errors[0]?.message || 'Unknown GraphQL error';
+        throw new Error(errorMessage);
+      }
+
       return {
         success: true,
-        data: savedChannel
+        data: result.data.createSourceChannel
       };
 
     } catch (error) {
@@ -406,36 +450,10 @@ class ModernShortHubBackground {
     }
   }
 
-  // Check if channel already exists
-  async checkChannelExists(youtubeUrl) {
-    try {
-      const response = await fetch(
-        `${this.supabaseUrl}/rest/v1/channels?youtube_url=eq.${encodeURIComponent(youtubeUrl)}&select=id`,
-        {
-          headers: {
-            'apikey': this.supabaseKey,
-            'Authorization': `Bearer ${this.supabaseKey}`
-          }
-        }
-      );
-
-      if (!response.ok) {
-        console.warn('Could not check channel existence:', response.statusText);
-        return false;
-      }
-
-      const channels = await response.json();
-      return channels && channels.length > 0;
-    } catch (error) {
-      console.warn('Error checking channel existence:', error);
-      return false;
-    }
-  }
-
   // Validate channel data
   validateChannelData(data) {
-    const required = ['youtube_url', 'username', 'tag', 'type'];
-    
+    const required = ['youtubeUrl', 'contentType'];
+
     for (const field of required) {
       if (!data[field]) {
         return {
@@ -445,77 +463,54 @@ class ModernShortHubBackground {
       }
     }
 
-    // Validate tag
-    const validTags = ['VF', 'VOSTFR', 'VA', 'VOSTA', 'VO'];
-    if (!validTags.includes(data.tag)) {
-      return {
-        valid: false,
-        error: 'Invalid tag. Must be one of: ' + validTags.join(', ')
-      };
-    }
+    // Validate contentType
+    const validContentTypes = [
+      'VA_SANS_EDIT',
+      'VA_AVEC_EDIT',
+      'VF_SANS_EDIT',
+      'VF_AVEC_EDIT',
+      'VO_SANS_EDIT',
+      'VO_AVEC_EDIT'
+    ];
 
-    // Validate type
-    const validTypes = ['Mix', 'Only'];
-    if (!validTypes.includes(data.type)) {
+    if (!validContentTypes.includes(data.contentType)) {
       return {
         valid: false,
-        error: 'Invalid type. Must be either "Mix" or "Only"'
-      };
-    }
-
-    // If type is "Only", domain is required
-    if (data.type === 'Only' && !data.domain) {
-      return {
-        valid: false,
-        error: 'Domain is required when type is "Only"'
+        error: 'Invalid content type. Must be one of: ' + validContentTypes.join(', ')
       };
     }
 
     return { valid: true };
   }
 
-  // Update configuration
-  async updateConfiguration(config) {
-    try {
-      await chrome.storage.sync.set({
-        supabaseUrl: config.supabaseUrl,
-        supabaseKey: config.supabaseKey,
-        youtubeApiKey: config.youtubeApiKey
-      });
-
-      // Update local variables
-      this.supabaseUrl = config.supabaseUrl;
-      this.supabaseKey = config.supabaseKey;
-      this.youtubeApiKey = config.youtubeApiKey;
-
-      return {
-        success: true,
-        message: 'Configuration updated successfully'
-      };
-    } catch (error) {
-      console.error('Error updating configuration:', error);
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  }
-
-  // Test database connection
+  // Test GraphQL connection
   async testConnection() {
     try {
-      if (!this.supabaseUrl || !this.supabaseKey) {
+      if (!this.graphqlEndpoint || !this.authToken) {
         return {
           success: false,
-          error: 'Supabase configuration missing'
+          error: 'GraphQL endpoint or auth token missing'
         };
       }
 
-      const response = await fetch(`${this.supabaseUrl}/rest/v1/channels?select=count&limit=1`, {
-        headers: {
-          'apikey': this.supabaseKey,
-          'Authorization': `Bearer ${this.supabaseKey}`
+      // Simple query to test connection
+      const query = `
+        query {
+          me {
+            id
+            username
+            role
+          }
         }
+      `;
+
+      const response = await fetch(this.graphqlEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.authToken}`
+        },
+        body: JSON.stringify({ query })
       });
 
       if (!response.ok) {
@@ -525,9 +520,19 @@ class ModernShortHubBackground {
         };
       }
 
+      const result = await response.json();
+
+      if (result.errors) {
+        return {
+          success: false,
+          error: result.errors[0]?.message || 'Authentication failed'
+        };
+      }
+
       return {
         success: true,
-        message: 'Database connection successful'
+        message: `Connected as ${result.data.me.username} (${result.data.me.role})`,
+        user: result.data.me
       };
     } catch (error) {
       return {
@@ -545,8 +550,10 @@ const modernShortHubBackground = new ModernShortHubBackground();
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
     console.log('ShortHub Extension installed');
-    
-    // Open welcome/setup page
+    console.log('GraphQL Endpoint:', CONFIG.GRAPHQL_ENDPOINT);
+    console.log('YouTube API configured:', !!CONFIG.YOUTUBE_API_KEY);
+
+    // Open popup to configure auth token
     chrome.tabs.create({
       url: chrome.runtime.getURL('popup/popup.html')
     });

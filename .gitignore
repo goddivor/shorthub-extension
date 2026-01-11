@@ -1,1 +1,39 @@
+# Environment variables
 .env
+.env.local
+.env.production
+
+# Build output
+dist/
+*.zip
+
+# Node modules
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Backup files
+*.backup
+*.bak
+
+# Generated config
+config.js
+popup/config.js
+
+# Extension stores
+*.crx
+*.xpi
+*.pem
+web-ext-artifacts/

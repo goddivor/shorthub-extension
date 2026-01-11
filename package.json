@@ -6,13 +6,14 @@
   "type": "module",
   "scripts": {
     "dev": "npm run build && npm run watch",
-    "build": "npm run clean && npm run copy-files && npm run optimize",
+    "build": "npm run clean && npm run copy-files && npm run build:config && npm run optimize",
+    "build:config": "node build-config.cjs",
     "clean": "rm -rf dist",
-    "copy-files": "mkdir -p dist && cp -r manifest.json background/ popup/ icons/ dist/",
+    "copy-files": "mkdir -p dist && cp -r manifest.json popup/ icons/ dist/",
     "optimize": "npm run optimize-images && npm run minify-js",
     "optimize-images": "echo 'Image optimization placeholder - add imagemin if needed'",
     "minify-js": "echo 'JS minification placeholder - add terser if needed'",
-    "watch": "chokidar 'background/**/*' 'popup/**/*' 'manifest.json' -c 'npm run build'",
+    "watch": "chokidar 'background/**/*' 'popup/**/*' 'manifest.json' '.env' -c 'npm run build'",
     "package": "npm run build && cd dist && zip -r ../shorthub-extension-v2.zip .",
     "lint": "eslint background/ popup/ --ext .js",
     "lint:fix": "eslint background/ popup/ --ext .js --fix",
@@ -30,7 +31,8 @@
     "shorts",
     "content-management",
     "youtube-api",
-    "supabase",
+    "graphql",
+    "apollo-server",
     "modern-ui"
   ],
   "author": {

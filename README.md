@@ -1,247 +1,318 @@
 # 🚀 ShortHub Extension v2.0
 
-> Modern browser extension to streamline your YouTube Shorts workflow by adding channels directly from YouTube to your ShortHub database.
+> Extension de navigateur moderne pour ajouter des chaînes YouTube sources directement depuis YouTube vers votre backend ShortHub GraphQL.
 
 ![ShortHub Extension](https://img.shields.io/badge/version-2.0.0-red?style=for-the-badge&logo=youtube)
 ![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
 ![Chrome](https://img.shields.io/badge/Chrome-supported-blue?style=for-the-badge&logo=googlechrome)
 ![Firefox](https://img.shields.io/badge/Firefox-supported-orange?style=for-the-badge&logo=firefox)
 
-## ✨ What's New in v2.0
+## ✨ Nouveautés v2.0
 
-### 🎯 Complete Architecture Refactor
-- **No more DOM injection** - Cleaner, more reliable approach
-- **Smart URL analysis** - Works on any YouTube page without content scripts
-- **Real-time channel detection** - Instant analysis when you open the popup
-- **Modern UI/UX** - Beautiful, responsive design with YouTube colors
+### 🎯 Refonte complète de l'architecture
+- **Intégration GraphQL** - Communication directe avec le backend ShortHub
+- **Plus de Supabase** - Nouveau système avec Apollo Server
+- **Types de contenu** - Support des ContentType (VA/VF/VO avec/sans édition)
+- **Analyse intelligente d'URL** - Fonctionne sur n'importe quelle page YouTube
+- **Interface moderne** - Design épuré et responsive
 
-### 🔧 Enhanced Features
-- **YouTube API Integration** - Accurate channel data extraction
-- **Advanced URL Parsing** - Supports all YouTube URL formats
-- **Intelligent Fallbacks** - Works even without API key
-- **Better Error Handling** - Clear feedback and retry mechanisms
+### 🔧 Fonctionnalités améliorées
+- **Authentification JWT** - Sécurité renforcée
+- **YouTube API Integration** - Extraction précise des données
+- **Parse avancé d'URL** - Support de tous les formats YouTube
+- **Fallbacks intelligents** - Fonctionne même sans clé API
+- **Gestion d'erreurs améliorée** - Feedback clair et mécanismes de retry
 
-## 🎯 Features
+## 🎯 Fonctionnalités
 
-### Core Functionality
-- 🎬 **Universal YouTube Support** - Works on channels, videos, shorts
-- 🔄 **Real-time Analysis** - Instant channel detection from any YouTube URL
-- 📊 **Accurate Data** - Fetch real subscriber counts and channel info
-- 🏷️ **Smart Tagging** - Organize by language (VF, VOSTFR, VA, VOSTA, VO)
-- 🎯 **Type Classification** - Mix content or domain-specific channels
-- 💾 **Supabase Integration** - Direct database storage
+### Fonctionnalités principales
+- 🎬 **Support YouTube universel** - Fonctionne sur les chaînes, vidéos, shorts
+- 🔄 **Analyse en temps réel** - Détection instantanée depuis n'importe quelle URL YouTube
+- 📊 **Données précises** - Récupération du nombre d'abonnés et infos de chaîne
+- 🏷️ **Types de contenu** - VA/VF/VO Sans Édition ou Avec Édition
+- 💾 **Intégration GraphQL** - Stockage direct via mutations
+- 🔐 **Authentification JWT** - Sécurité de niveau entreprise
 
-### User Experience
-- 🎨 **Modern UI** - Clean, intuitive interface with YouTube branding
-- ⚡ **Instant Feedback** - Real-time status updates and validation
-- 🔧 **Easy Configuration** - Simple setup for database and API keys
-- 📱 **Responsive Design** - Works perfectly on any screen size
+### Expérience utilisateur
+- 🎨 **Interface moderne** - Interface propre et intuitive
+- ⚡ **Feedback instantané** - Mises à jour et validation en temps réel
+- 🔧 **Configuration facile** - Setup simple pour backend et clés API
+- 📱 **Design responsive** - Fonctionne parfaitement sur tous les écrans
 
 ## 🚀 Installation
 
-### For Users
-1. **Download** the latest release from [GitHub Releases](https://github.com/goddivor/shorthub-extension/releases)
-2. **Unzip** the extension package
-3. **Open** Chrome/Firefox extensions page
+### Pour les utilisateurs
+1. **Télécharger** la dernière release depuis [GitHub Releases](https://github.com/goddivor/shorthub-extension/releases)
+2. **Dézipper** le package d'extension
+3. **Ouvrir** la page des extensions Chrome/Firefox
    - Chrome: `chrome://extensions/`
    - Firefox: `about:addons`
-4. **Enable** Developer mode
-5. **Load** the extension folder
+4. **Activer** le Mode développeur
+5. **Charger** le dossier d'extension
 
-### For Developers
+### Pour les développeurs
 ```bash
-# Clone the repository
-git clone https://github.com/goddivor/shorthub-extension.git
-cd shorthub-extension
+# Cloner le repository
+cd extension
 
-# Install dependencies
+# Installer les dépendances
 npm install
 
-# Build the extension
+# Builder l'extension
 npm run build
 
-# Start development with hot reload
+# Développement avec hot reload
 npm run dev
 ```
 
 ## ⚙️ Configuration
 
-### 1. Supabase Setup (Required)
-```javascript
-// Your Supabase project configuration
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key-here
+### 1. Backend ShortHub (Requis)
+
+Assurez-vous que votre backend ShortHub GraphQL est en cours d'exécution:
+```bash
+cd server
+npm run dev  # Démarre sur http://localhost:4000/graphql
 ```
 
-### 2. YouTube API Key (Optional but Recommended)
-```javascript
-// For accurate channel data extraction
-YOUTUBE_API_KEY=your-youtube-api-key-here
-```
+### 2. Obtenir votre Token JWT (Requis)
 
-**Getting YouTube API Key:**
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing
-3. Enable YouTube Data API v3
-4. Create credentials (API Key)
-5. Restrict the key to YouTube Data API v3
+1. Connectez-vous à ShortHub web (http://localhost:5173)
+2. Ouvrez les DevTools (F12) → Console
+3. Tapez: `localStorage.getItem('auth_token')`
+4. Copiez le token (sans les guillemets)
 
-## 🔧 Usage
+### 3. Configurer l'extension
 
-### Adding a Channel
-1. **Visit** any YouTube page (channel, video, or short)
-2. **Click** the ShortHub extension icon
-3. **Review** the detected channel information
-4. **Select** language tag and type
-5. **Add domain** if type is "Only"
-6. **Click** "Add to ShortHub"
+1. **Cliquez** sur l'icône ShortHub dans votre navigateur
+2. **Allez** dans l'onglet **Settings**
+3. **Remplissez** les champs:
+   - **GraphQL Endpoint**: `http://localhost:4000/graphql` (développement)
+   - **Authentication Token**: Collez votre token JWT
+   - **YouTube API Key** (optionnel): Votre clé API YouTube
 
-### Supported URL Formats
-- `https://youtube.com/channel/UC...` - Direct channel ID
-- `https://youtube.com/@username` - Channel handle
-- `https://youtube.com/c/channelname` - Custom URL
-- `https://youtube.com/user/username` - Legacy username
-- `https://youtube.com/watch?v=...` - Video page
-- `https://youtube.com/shorts/...` - Shorts page
+4. **Cliquez** sur **Save Configuration**
+5. **Cliquez** sur **Test Connection** pour vérifier
+
+### 4. YouTube API Key (Optionnel mais recommandé)
+
+**Pour obtenir une clé API YouTube:**
+1. Allez sur [Google Cloud Console](https://console.cloud.google.com/)
+2. Créez un nouveau projet ou sélectionnez un existant
+3. Activez YouTube Data API v3
+4. Créez des credentials (Clé API)
+5. Restreignez la clé à YouTube Data API v3
+
+## 🔧 Utilisation
+
+### Ajouter une chaîne source
+
+1. **Visitez** n'importe quelle page YouTube (chaîne, vidéo, ou short)
+2. **Cliquez** sur l'icône de l'extension ShortHub
+3. **Vérifiez** les informations de chaîne détectées
+4. **Sélectionnez** le type de contenu:
+   - **VA Sans Édition**: Version Anglaise sans édition
+   - **VA Avec Édition**: Version Anglaise avec édition
+   - **VF Sans Édition**: Version Française sans édition
+   - **VF Avec Édition**: Version Française avec édition
+   - **VO Sans Édition**: Version Originale sans édition
+   - **VO Avec Édition**: Version Originale avec édition
+5. **Cliquez** sur "Add to ShortHub"
+
+### Formats d'URL supportés
+- `https://youtube.com/channel/UC...` - ID de chaîne direct
+- `https://youtube.com/@username` - Handle de chaîne
+- `https://youtube.com/c/channelname` - URL personnalisée
+- `https://youtube.com/user/username` - Username legacy
+- `https://youtube.com/watch?v=...` - Page de vidéo
+- `https://youtube.com/shorts/...` - Page de shorts
 
 ## 🏗️ Architecture
 
 ### Background Script (`background/background.js`)
 ```typescript
 class ModernShortHubBackground {
-  // YouTube API integration
+  // Intégration YouTube API
   extractChannelFromUrl(url: string)
-  
-  // Database operations
+
+  // Opérations GraphQL
   saveChannel(channelData: ChannelData)
-  
-  // Configuration management
+
+  // Gestion de configuration
   updateConfiguration(config: Config)
+
+  // Test de connexion
+  testConnection()
 }
 ```
 
-### Popup Interface (`popup/popup.html`)
+### Popup Interface (`popup/popup.html` + `popup.js`)
 ```typescript
 class ModernShortHubPopup {
-  // URL analysis and channel detection
+  // Analyse d'URL et détection de chaîne
   analyzeCurrentPage()
-  
-  // Form handling and validation
+
+  // Gestion de formulaire et validation
   validateForm()
-  
-  // User interaction management
-  handleChannelAddition()
+
+  // Gestion des interactions utilisateur
+  addChannel()
 }
 ```
 
-### Key Improvements Over v1.0
-- ❌ **No Content Scripts** - Eliminated unreliable DOM injection
-- ✅ **Pure Background Processing** - All logic in service worker
-- ✅ **API-First Approach** - YouTube API for accurate data
-- ✅ **Modern UI Components** - Custom-designed interface
-- ✅ **Better Error Handling** - Comprehensive error management
+### Améliorations clés par rapport à v1.0
+- ❌ **Pas de Supabase** - Migration vers GraphQL
+- ✅ **Authentification JWT** - Sécurité renforcée
+- ✅ **Types de contenu** - Système de ContentType
+- ✅ **Traitement en arrière-plan** - Toute la logique dans le service worker
+- ✅ **Approche API-first** - YouTube API pour données précises
 
-## 📊 Data Schema
+## 📊 Schéma de données
 
-### Channel Object
+### Objet SourceChannel
 ```typescript
-interface Channel {
-  youtube_url: string      // Original YouTube URL
-  username: string         // Channel name/handle
-  subscriber_count: number // Current subscriber count
-  tag: TagType            // VF | VOSTFR | VA | VOSTA | VO
-  type: ChannelType       // Mix | Only
-  domain?: string         // Required if type === 'Only'
+interface CreateSourceChannelInput {
+  youtubeUrl: string        // URL YouTube originale
+  contentType: ContentType  // Type de contenu
+}
+
+enum ContentType {
+  VA_SANS_EDIT   // Version Anglaise sans édition
+  VA_AVEC_EDIT   // Version Anglaise avec édition
+  VF_SANS_EDIT   // Version Française sans édition
+  VF_AVEC_EDIT   // Version Française avec édition
+  VO_SANS_EDIT   // Version Originale sans édition
+  VO_AVEC_EDIT   // Version Originale avec édition
 }
 ```
 
-## 🔒 Privacy & Security
-
-- **No Data Collection** - Extension only stores what you configure
-- **Local Storage** - Configuration stored locally in browser
-- **Direct API Calls** - No intermediate servers
-- **Minimal Permissions** - Only YouTube and configured domains
-
-## 🛠️ Development
-
-### Project Structure
+### Mutation GraphQL
+```graphql
+mutation CreateSourceChannel($input: CreateSourceChannelInput!) {
+  createSourceChannel(input: $input) {
+    id
+    channelId
+    channelName
+    profileImageUrl
+    contentType
+    createdAt
+  }
+}
 ```
-shorthub-extension/
-├── manifest.json          # Extension manifest
+
+## 🔒 Confidentialité & Sécurité
+
+- **Pas de collecte de données** - L'extension stocke uniquement ce que vous configurez
+- **Stockage local** - Configuration stockée localement dans le navigateur
+- **Appels API directs** - Pas de serveurs intermédiaires
+- **Permissions minimales** - Uniquement YouTube et domaines configurés
+- **JWT sécurisé** - Authentification de niveau entreprise
+
+## 🛠️ Développement
+
+### Structure du projet
+```
+extension/
+├── manifest.json          # Manifest de l'extension
 ├── background/
 │   └── background.js      # Service worker
 ├── popup/
-│   └── popup.html         # Modern popup interface
-├── icons/                 # Extension icons
-└── dist/                  # Built extension
+│   ├── popup.html         # Interface popup moderne
+│   └── popup.js           # Logique popup
+├── icons/                 # Icônes de l'extension
+└── dist/                  # Extension buildée
 ```
 
-### Build Commands
+### Commandes de build
 ```bash
-npm run build      # Build for production
-npm run dev        # Development with watch
-npm run lint       # Code linting
-npm run test       # Run tests
-npm run package    # Create distribution zip
+npm run build      # Build pour production
+npm run dev        # Développement avec watch
+npm run lint       # Linting du code
+npm run test       # Lancer les tests
+npm run package    # Créer le zip de distribution
 ```
 
-### Testing
+### Tests
 ```bash
-# Unit tests
+# Tests unitaires
 npm run test
 
-# Extension validation
+# Validation de l'extension
 npm run validate
 
-# Browser testing
-npm run start:firefox  # Firefox development
-npm run start:chrome   # Chrome instructions
+# Tests navigateur
+npm run start:firefox  # Développement Firefox
+npm run start:chrome   # Instructions Chrome
 ```
 
-## 🔄 Migration from v1.0
+## 🔄 Migration depuis v1.0
 
-### What Changed
-1. **No more content scripts** - Remove all DOM injection code
-2. **New popup design** - Modern, responsive interface
-3. **YouTube API integration** - More accurate data extraction
-4. **Better configuration** - Streamlined setup process
+### Ce qui a changé
+1. **Supabase → GraphQL** - Nouveau backend
+2. **Nouveau design popup** - Interface moderne et responsive
+3. **Types de contenu** - Système ContentType au lieu de tag/type/domain
+4. **Authentification JWT** - Plus sécurisé que les clés Supabase
+5. **Intégration YouTube API** - Extraction de données plus précise
 
-### Migration Steps
-1. **Uninstall** old extension
-2. **Install** v2.0 extension
-3. **Reconfigure** Supabase credentials
-4. **Add** YouTube API key (optional)
-5. **Test** with your favorite channels
+### Étapes de migration
+1. **Désinstaller** l'ancienne extension
+2. **Installer** l'extension v2.0
+3. **Configurer** le GraphQL endpoint et token JWT
+4. **Ajouter** la clé YouTube API (optionnel)
+5. **Tester** avec vos chaînes favorites
 
-## 🤝 Contributing
+## 🐛 Dépannage
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+### L'extension ne détecte pas la chaîne
+- Vérifiez que vous êtes sur une page YouTube valide
+- Rafraîchissez la page
+- Vérifiez que votre clé YouTube API est valide
 
-### Development Setup
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+### Erreur "Backend not configured"
+- Allez dans Settings
+- Vérifiez le GraphQL Endpoint
+- Vérifiez votre token JWT
+- Cliquez sur "Test Connection"
 
-## 📝 License
+### Erreur "Authentication failed"
+- Votre token JWT a expiré
+- Reconnectez-vous à ShortHub web
+- Obtenez un nouveau token
+- Mettez à jour dans Settings
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### La chaîne existe déjà
+- Le backend refuse d'ajouter une chaîne déjà présente
+- Vérifiez dans l'interface admin
 
-## 🙏 Acknowledgments
+## 🤝 Contribution
 
-- **YouTube API** - For providing comprehensive channel data
-- **Supabase** - For the excellent database platform
-- **Chrome Extensions Team** - For the robust extension platform
-- **Our Contributors** - For making this project better
+Nous accueillons les contributions! Consultez notre [Guide de contribution](CONTRIBUTING.md) pour plus de détails.
 
-## 🔗 Links
+### Setup de développement
+1. Fork le repository
+2. Créez une branche feature
+3. Faites vos changements
+4. Ajoutez des tests si applicable
+5. Soumettez une pull request
 
-- [Main ShortHub App](https://github.com/goddivor/shorthub)
-- [Extension Store Page](https://chrome.google.com/webstore/detail/shorthub) (Coming Soon)
+## 📝 Licence
+
+Ce projet est sous licence MIT - voir le fichier [LICENSE](LICENSE) pour plus de détails.
+
+## 🙏 Remerciements
+
+- **YouTube API** - Pour les données complètes des chaînes
+- **Apollo Server** - Pour l'excellente plateforme GraphQL
+- **Chrome Extensions Team** - Pour la plateforme d'extension robuste
+- **Nos contributeurs** - Pour améliorer ce projet
+
+## 🔗 Liens
+
+- [App ShortHub principale](https://github.com/goddivor/shorthub)
+- [Store Extension](https://chrome.google.com/webstore/detail/shorthub) (Bientôt)
 - [Documentation](https://docs.shorthub.dev)
 - [Support](https://github.com/goddivor/shorthub-extension/issues)
 
 ---
 
-**Made with ❤️ for YouTube creators by the ShortHub team**
+**Fait avec ❤️ pour les créateurs YouTube par l'équipe ShortHub**
