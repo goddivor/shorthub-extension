@@ -7,6 +7,7 @@ class ModernShortHubBackground {
     this.graphqlEndpoint = CONFIG.GRAPHQL_ENDPOINT;
     this.youtubeApiKey = CONFIG.YOUTUBE_API_KEY;
     this.authToken = null;
+    this.userInfo = null;
     this.init();
   }
 
@@ -24,11 +25,13 @@ class ModernShortHubBackground {
   // Load auth token from storage
   async loadAuthToken() {
     try {
-      const result = await chrome.storage.sync.get(['authToken']);
+      const result = await chrome.storage.sync.get(['authToken', 'userInfo']);
       this.authToken = result.authToken;
+      this.userInfo = result.userInfo;
 
       console.log('ShortHub: Auth token loaded', {
         hasToken: !!this.authToken,
+        user: this.userInfo?.username,
         endpoint: this.graphqlEndpoint
       });
     } catch (error) {
@@ -40,6 +43,24 @@ class ModernShortHubBackground {
   async handleMessage(request, sender, sendResponse) {
     try {
       switch (request.action) {
+        case 'login':
+          const loginResult = await this.login(request.username, request.password);
+          sendResponse(loginResult);
+          break;
+
+        case 'logout':
+          const logoutResult = await this.logout();
+          sendResponse(logoutResult);
+          break;
+
+        case 'getUserInfo':
+          sendResponse({
+            success: true,
+            user: this.userInfo,
+            hasAuth: !!this.authToken
+          });
+          break;
+
         case 'extractChannelFromUrl':
           const channelData = await this.extractChannelFromUrl(request.url);
           sendResponse(channelData);
@@ -73,15 +94,173 @@ class ModernShortHubBackground {
     }
   }
 
-  // Set auth token
-  async setAuthToken(token) {
+  // Login with username and password
+  async login(username, password) {
     try {
-      await chrome.storage.sync.set({ authToken: token });
+      if (!this.graphqlEndpoint) {
+        return {
+          success: false,
+          error: 'GraphQL endpoint not configured'
+        };
+      }
+
+      // GraphQL login mutation
+      const mutation = `
+        mutation Login($username: String!, $password: String!) {
+          login(username: $username, password: $password) {
+            token
+            refreshToken
+            user {
+              id
+              username
+              role
+              email
+            }
+          }
+        }
+      `;
+
+      const variables = {
+        username,
+        password
+      };
+
+      const response = await fetch(this.graphqlEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query: mutation,
+          variables
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.errors) {
+        const errorMessage = result.errors[0]?.message || 'Login failed';
+        throw new Error(errorMessage);
+      }
+
+      // Save auth token and user info
+      const { token, refreshToken, user } = result.data.login;
+
+      await chrome.storage.sync.set({
+        authToken: token,
+        refreshToken: refreshToken,
+        userInfo: {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          email: user.email
+        }
+      });
+
       this.authToken = token;
+      this.userInfo = {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        email: user.email
+      };
+
+      console.log('ShortHub: Login successful', {
+        username: user.username,
+        role: user.role
+      });
 
       return {
         success: true,
-        message: 'Auth token saved successfully'
+        message: `Connecté en tant que ${user.username}`,
+        user: this.userInfo
+      };
+
+    } catch (error) {
+      console.error('ShortHub: Login error:', error);
+      return {
+        success: false,
+        error: error.message || 'Échec de la connexion'
+      };
+    }
+  }
+
+  // Logout and clear auth data
+  async logout() {
+    try {
+      await chrome.storage.sync.remove(['authToken', 'refreshToken', 'userInfo']);
+      this.authToken = null;
+      this.userInfo = null;
+
+      console.log('ShortHub: Logout successful');
+
+      return {
+        success: true,
+        message: 'Déconnexion réussie'
+      };
+    } catch (error) {
+      console.error('ShortHub: Logout error:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  // Set auth token (for manual token entry)
+  async setAuthToken(token) {
+    try {
+      // Test the token first
+      const response = await fetch(this.graphqlEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          query: `query { me { id username role email } }`
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Token invalide');
+      }
+
+      const result = await response.json();
+
+      if (result.errors) {
+        throw new Error('Token invalide ou expiré');
+      }
+
+      const user = result.data.me;
+
+      // Save token and user info
+      await chrome.storage.sync.set({
+        authToken: token,
+        userInfo: {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          email: user.email
+        }
+      });
+
+      this.authToken = token;
+      this.userInfo = {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        email: user.email
+      };
+
+      return {
+        success: true,
+        message: `Token validé - Connecté en tant que ${user.username}`,
+        user: this.userInfo
       };
     } catch (error) {
       console.error('Error setting auth token:', error);

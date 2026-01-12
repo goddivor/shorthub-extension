@@ -4,43 +4,110 @@ class ModernShortHubPopup {
     this.currentChannelData = null;
     this.isLoading = false;
     this.hasAuthToken = false;
+    this.userInfo = null;
     this.init();
   }
 
   async init() {
     this.setupEventListeners();
-    await this.checkAuthToken();
-    await this.analyzeCurrentPage();
+    await this.checkAuthentication();
   }
 
-  async checkAuthToken() {
+  async checkAuthentication() {
     try {
       const response = await chrome.runtime.sendMessage({
-        action: 'getAuthToken'
+        action: 'getUserInfo'
       });
 
-      this.hasAuthToken = !!response.token;
+      this.hasAuthToken = response.hasAuth;
+      this.userInfo = response.user;
 
-      if (!this.hasAuthToken) {
-        this.showTokenSetup();
+      if (this.hasAuthToken && this.userInfo) {
+        // User is authenticated
+        this.showAuthenticatedInterface();
+        await this.analyzeCurrentPage();
+      } else {
+        // User needs to login
+        this.showLoginInterface();
       }
     } catch (error) {
-      console.error('Error checking auth token:', error);
-      this.showTokenSetup();
+      console.error('Error checking authentication:', error);
+      this.showLoginInterface();
     }
   }
 
-  showTokenSetup() {
-    const tokenSetupSection = document.getElementById('token-setup-section');
-    tokenSetupSection.classList.remove('hidden');
+  showLoginInterface() {
+    // Hide authenticated sections
+    document.getElementById('user-info-section').classList.add('hidden');
+    document.getElementById('status-section').classList.add('hidden');
+    document.getElementById('channel-section').classList.add('hidden');
+
+    // Show login section
+    document.getElementById('login-section').classList.remove('hidden');
   }
 
-  hideTokenSetup() {
-    const tokenSetupSection = document.getElementById('token-setup-section');
-    tokenSetupSection.classList.add('hidden');
+  showAuthenticatedInterface() {
+    // Hide login section
+    document.getElementById('login-section').classList.add('hidden');
+
+    // Show authenticated sections
+    document.getElementById('user-info-section').classList.remove('hidden');
+    document.getElementById('status-section').classList.remove('hidden');
+
+    // Update user info display
+    this.updateUserInfoDisplay();
+  }
+
+  updateUserInfoDisplay() {
+    if (!this.userInfo) return;
+
+    document.getElementById('user-name').textContent = this.userInfo.username;
+    document.getElementById('user-role').textContent = this.userInfo.role;
+
+    // Update avatar with first letter of username
+    const avatar = document.getElementById('user-avatar');
+    avatar.textContent = this.userInfo.username.charAt(0).toUpperCase();
   }
 
   setupEventListeners() {
+    // Login form
+    document.getElementById('login-btn').addEventListener('click', () => {
+      this.handleLogin();
+    });
+
+    document.getElementById('login-username').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('login-password').focus();
+      }
+    });
+
+    document.getElementById('login-password').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        this.handleLogin();
+      }
+    });
+
+    // Advanced options toggle
+    document.getElementById('advanced-toggle').addEventListener('click', () => {
+      this.toggleAdvancedOptions();
+    });
+
+    // Manual token
+    document.getElementById('save-manual-token-btn').addEventListener('click', () => {
+      this.saveManualToken();
+    });
+
+    document.getElementById('manual-token-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        this.saveManualToken();
+      }
+    });
+
+    // Logout button
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      this.handleLogout();
+    });
+
     // Content type change
     document.getElementById('content-type-select').addEventListener('change', () => {
       this.validateForm();
@@ -55,31 +122,93 @@ class ModernShortHubPopup {
     document.getElementById('open-app-btn').addEventListener('click', () => {
       this.openShortHubApp();
     });
-
-    // Save token button
-    document.getElementById('save-token-btn').addEventListener('click', () => {
-      this.saveAuthToken();
-    });
-
-    // Enter key in token input
-    document.getElementById('auth-token-input').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        this.saveAuthToken();
-      }
-    });
   }
 
-  async saveAuthToken() {
-    const tokenInput = document.getElementById('auth-token-input');
-    const token = tokenInput.value.trim();
+  async handleLogin() {
+    const usernameInput = document.getElementById('login-username');
+    const passwordInput = document.getElementById('login-password');
 
-    if (!token) {
-      this.showMessage('Veuillez entrer un token JWT', 'error');
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
+
+    if (!username || !password) {
+      this.showLoginMessage('Veuillez entrer votre nom d\'utilisateur et mot de passe', 'error');
       return;
     }
 
     try {
-      this.setLoading(true);
+      this.setLoginLoading(true);
+
+      const response = await chrome.runtime.sendMessage({
+        action: 'login',
+        username: username,
+        password: password
+      });
+
+      if (response.success) {
+        this.hasAuthToken = true;
+        this.userInfo = response.user;
+        this.showLoginMessage(response.message, 'success');
+
+        // Wait a bit then show authenticated interface
+        setTimeout(() => {
+          this.showAuthenticatedInterface();
+          this.analyzeCurrentPage();
+        }, 1000);
+      } else {
+        this.showLoginMessage(response.error || 'Échec de la connexion', 'error');
+      }
+    } catch (error) {
+      console.error('Error during login:', error);
+      this.showLoginMessage('Erreur lors de la connexion', 'error');
+    } finally {
+      this.setLoginLoading(false);
+    }
+  }
+
+  async handleLogout() {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'logout'
+      });
+
+      if (response.success) {
+        this.hasAuthToken = false;
+        this.userInfo = null;
+        this.currentChannelData = null;
+
+        // Reset form
+        document.getElementById('login-username').value = '';
+        document.getElementById('login-password').value = '';
+
+        // Show login interface
+        this.showLoginInterface();
+        this.showLoginMessage('Déconnexion réussie', 'success');
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  }
+
+  toggleAdvancedOptions() {
+    const toggle = document.getElementById('advanced-toggle');
+    const content = document.getElementById('advanced-content');
+
+    toggle.classList.toggle('active');
+    content.classList.toggle('hidden');
+  }
+
+  async saveManualToken() {
+    const tokenInput = document.getElementById('manual-token-input');
+    const token = tokenInput.value.trim();
+
+    if (!token) {
+      this.showLoginMessage('Veuillez entrer un token JWT', 'error');
+      return;
+    }
+
+    try {
+      this.setLoginLoading(true);
 
       const response = await chrome.runtime.sendMessage({
         action: 'setAuthToken',
@@ -88,27 +217,22 @@ class ModernShortHubPopup {
 
       if (response.success) {
         this.hasAuthToken = true;
-        this.hideTokenSetup();
-        this.showMessage('Token enregistré avec succès!', 'success');
+        this.userInfo = response.user;
+        this.showLoginMessage(response.message, 'success');
 
-        // Test connection
-        const testResponse = await chrome.runtime.sendMessage({
-          action: 'testConnection'
-        });
-
-        if (testResponse.success) {
-          this.showMessage(testResponse.message, 'success');
-        } else {
-          this.showMessage('Token enregistré mais connexion échouée: ' + testResponse.error, 'error');
-        }
+        // Wait a bit then show authenticated interface
+        setTimeout(() => {
+          this.showAuthenticatedInterface();
+          this.analyzeCurrentPage();
+        }, 1000);
       } else {
-        this.showMessage(response.error || 'Échec de l\'enregistrement du token', 'error');
+        this.showLoginMessage(response.error || 'Token invalide', 'error');
       }
     } catch (error) {
-      console.error('Error saving token:', error);
-      this.showMessage('Erreur lors de l\'enregistrement', 'error');
+      console.error('Error saving manual token:', error);
+      this.showLoginMessage('Erreur lors de la validation du token', 'error');
     } finally {
-      this.setLoading(false);
+      this.setLoginLoading(false);
     }
   }
 
@@ -288,21 +412,49 @@ class ModernShortHubPopup {
   setLoading(loading) {
     this.isLoading = loading;
     const addBtn = document.getElementById('add-channel-btn');
-    const saveTokenBtn = document.getElementById('save-token-btn');
 
     if (loading) {
       addBtn.innerHTML = '<div class="loading-spinner"></div>Processing...';
       addBtn.disabled = true;
-      if (saveTokenBtn) {
-        saveTokenBtn.disabled = true;
-      }
     } else {
-      addBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>Add to ShortHub';
+      addBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>Ajouter à ShortHub';
       this.validateForm();
-      if (saveTokenBtn) {
-        saveTokenBtn.disabled = false;
-      }
     }
+  }
+
+  setLoginLoading(loading) {
+    const loginBtn = document.getElementById('login-btn');
+    const saveManualTokenBtn = document.getElementById('save-manual-token-btn');
+
+    if (loading) {
+      loginBtn.innerHTML = '<div class="loading-spinner"></div>Connexion...';
+      loginBtn.disabled = true;
+      saveManualTokenBtn.disabled = true;
+    } else {
+      loginBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10 17l5-5-5-5v10z"/><path d="M0 0h24v24H0z" fill="none"/></svg>Se connecter';
+      loginBtn.disabled = false;
+      saveManualTokenBtn.disabled = false;
+    }
+  }
+
+  showLoginMessage(message, type) {
+    const container = document.getElementById('login-message-container');
+
+    // Remove existing messages
+    container.innerHTML = '';
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
+
+    const icon = type === 'error' ? '⚠️' : '✅';
+    messageDiv.innerHTML = '<span>' + icon + '</span><span>' + message + '</span>';
+
+    container.appendChild(messageDiv);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      messageDiv.remove();
+    }, 5000);
   }
 
   showMessage(message, type) {
