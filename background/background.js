@@ -7,7 +7,9 @@ class ModernShortHubBackground {
     this.graphqlEndpoint = CONFIG.GRAPHQL_ENDPOINT;
     this.youtubeApiKey = CONFIG.YOUTUBE_API_KEY;
     this.authToken = null;
+    this.refreshToken = null;
     this.userInfo = null;
+    this._isRefreshing = false;
     this.init();
   }
 
@@ -25,18 +27,157 @@ class ModernShortHubBackground {
   // Load auth token from storage
   async loadAuthToken() {
     try {
-      const result = await chrome.storage.sync.get(['authToken', 'userInfo']);
+      const result = await chrome.storage.sync.get(['authToken', 'refreshToken', 'userInfo']);
       this.authToken = result.authToken;
+      this.refreshToken = result.refreshToken;
       this.userInfo = result.userInfo;
 
       console.log('ShortHub: Auth token loaded', {
         hasToken: !!this.authToken,
+        hasRefreshToken: !!this.refreshToken,
         user: this.userInfo?.username,
         endpoint: this.graphqlEndpoint
       });
     } catch (error) {
       console.error('ShortHub: Failed to load auth token:', error);
     }
+  }
+
+  // Get device info for session tracking
+  _getDeviceInfo() {
+    const ua = navigator.userAgent;
+    let browser = 'Unknown Browser';
+    let os = 'Unknown OS';
+
+    // Detect browser
+    if (ua.includes('Firefox/')) {
+      const version = ua.match(/Firefox\/(\d+)/)?.[1];
+      browser = `Firefox ${version || ''}`.trim();
+    } else if (ua.includes('Edg/')) {
+      const version = ua.match(/Edg\/(\d+)/)?.[1];
+      browser = `Edge ${version || ''}`.trim();
+    } else if (ua.includes('Chrome/')) {
+      const version = ua.match(/Chrome\/(\d+)/)?.[1];
+      browser = `Chrome ${version || ''}`.trim();
+    }
+
+    // Detect OS
+    if (ua.includes('Windows')) {
+      os = 'Windows';
+    } else if (ua.includes('Mac OS')) {
+      os = 'macOS';
+    } else if (ua.includes('Linux')) {
+      os = 'Linux';
+    }
+
+    return `${browser} Extension (${os})`;
+  }
+
+  // Check if a GraphQL result contains an UNAUTHENTICATED error
+  _isAuthError(result) {
+    if (!result.errors) return false;
+    return result.errors.some(
+      (e) => e.extensions?.code === 'UNAUTHENTICATED'
+    );
+  }
+
+  // Try to refresh the access token using the stored refresh token
+  async _tryRefreshToken() {
+    if (this._isRefreshing) return null;
+    if (!this.refreshToken) return null;
+    this._isRefreshing = true;
+
+    try {
+      console.log('ShortHub: Attempting token refresh...');
+
+      const mutation = `
+        mutation RefreshToken($token: String!, $platform: Platform, $deviceInfo: String) {
+          refreshToken(token: $token, platform: $platform, deviceInfo: $deviceInfo) {
+            token
+            refreshToken
+          }
+        }
+      `;
+
+      const response = await fetch(this.graphqlEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: mutation,
+          variables: {
+            token: this.refreshToken,
+            platform: 'EXTENSION',
+            deviceInfo: this._getDeviceInfo()
+          }
+        })
+      });
+
+      if (!response.ok) return null;
+
+      const result = await response.json();
+      if (result.errors || !result.data?.refreshToken) {
+        console.warn('ShortHub: Token refresh failed', result.errors);
+        return null;
+      }
+
+      const { token, refreshToken } = result.data.refreshToken;
+
+      // Update stored tokens
+      this.authToken = token;
+      this.refreshToken = refreshToken;
+      await chrome.storage.sync.set({ authToken: token, refreshToken });
+
+      console.log('ShortHub: Token refreshed successfully');
+      return token;
+    } catch (error) {
+      console.error('ShortHub: Token refresh error:', error);
+      return null;
+    } finally {
+      this._isRefreshing = false;
+    }
+  }
+
+  // Execute authenticated GraphQL request with auto-refresh on auth failure
+  async _fetchGraphQL(query, variables = {}) {
+    const doFetch = () =>
+      fetch(this.graphqlEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.authToken}`
+        },
+        body: JSON.stringify({ query, variables })
+      });
+
+    const response = await doFetch();
+    if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+
+    const result = await response.json();
+
+    // If auth error, try refresh and retry once
+    if (this._isAuthError(result)) {
+      const newToken = await this._tryRefreshToken();
+      if (newToken) {
+        console.log('ShortHub: Retrying request after token refresh');
+        const retryResponse = await doFetch();
+        if (!retryResponse.ok) throw new Error(`HTTP error: ${retryResponse.status}`);
+        return await retryResponse.json();
+      }
+      // Refresh failed — force logout
+      await this._forceLogout();
+      throw new Error('Session expired. Please log in again.');
+    }
+
+    return result;
+  }
+
+  // Force logout (clear tokens without calling server)
+  async _forceLogout() {
+    await chrome.storage.sync.remove(['authToken', 'refreshToken', 'userInfo']);
+    this.authToken = null;
+    this.refreshToken = null;
+    this.userInfo = null;
+    console.log('ShortHub: Forced logout due to expired session');
   }
 
   // Handle messages from popup
@@ -106,8 +247,8 @@ class ModernShortHubBackground {
 
       // GraphQL login mutation
       const mutation = `
-        mutation Login($username: String!, $password: String!) {
-          login(username: $username, password: $password) {
+        mutation Login($username: String!, $password: String!, $platform: Platform, $deviceInfo: String) {
+          login(username: $username, password: $password, platform: $platform, deviceInfo: $deviceInfo) {
             token
             refreshToken
             user {
@@ -122,7 +263,9 @@ class ModernShortHubBackground {
 
       const variables = {
         username,
-        password
+        password,
+        platform: 'EXTENSION',
+        deviceInfo: this._getDeviceInfo()
       };
 
       const response = await fetch(this.graphqlEndpoint, {
@@ -162,6 +305,7 @@ class ModernShortHubBackground {
       });
 
       this.authToken = token;
+      this.refreshToken = refreshToken;
       this.userInfo = {
         id: user.id,
         username: user.username,
@@ -192,8 +336,34 @@ class ModernShortHubBackground {
   // Logout and clear auth data
   async logout() {
     try {
+      // Call server logout to revoke the refresh token
+      if (this.refreshToken && this.authToken) {
+        try {
+          const mutation = `
+            mutation Logout($refreshToken: String!) {
+              logout(refreshToken: $refreshToken)
+            }
+          `;
+          await fetch(this.graphqlEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.authToken}`
+            },
+            body: JSON.stringify({
+              query: mutation,
+              variables: { refreshToken: this.refreshToken }
+            })
+          });
+        } catch (e) {
+          // Server logout failed, continue with local cleanup
+          console.warn('ShortHub: Server logout failed, clearing locally:', e);
+        }
+      }
+
       await chrome.storage.sync.remove(['authToken', 'refreshToken', 'userInfo']);
       this.authToken = null;
+      this.refreshToken = null;
       this.userInfo = null;
 
       console.log('ShortHub: Logout successful');
@@ -238,7 +408,7 @@ class ModernShortHubBackground {
 
       const user = result.data.me;
 
-      // Save token and user info
+      // Save token and user info (no refreshToken for manual entry)
       await chrome.storage.sync.set({
         authToken: token,
         userInfo: {
@@ -591,24 +761,8 @@ class ModernShortHubBackground {
         }
       };
 
-      // Send mutation to GraphQL endpoint
-      const response = await fetch(this.graphqlEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.authToken}`
-        },
-        body: JSON.stringify({
-          query: mutation,
-          variables: variables
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`GraphQL error: ${response.status}`);
-      }
-
-      const result = await response.json();
+      // Send mutation to GraphQL endpoint (with auto-refresh)
+      const result = await this._fetchGraphQL(mutation, variables);
 
       if (result.errors) {
         const errorMessage = result.errors[0]?.message || 'Unknown GraphQL error';
@@ -683,23 +837,7 @@ class ModernShortHubBackground {
         }
       `;
 
-      const response = await fetch(this.graphqlEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.authToken}`
-        },
-        body: JSON.stringify({ query })
-      });
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: `Connection failed: ${response.status} ${response.statusText}`
-        };
-      }
-
-      const result = await response.json();
+      const result = await this._fetchGraphQL(query);
 
       if (result.errors) {
         return {
